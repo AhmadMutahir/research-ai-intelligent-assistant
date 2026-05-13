@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResearchAI — Intelligent Research Assistant</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f4;
+    --text-primary: #1a1a1a;
+    --text-secondary: #6b7280;
+    --text-tertiary: #9ca3af;
+    --border-light: rgba(0,0,0,0.10);
+    --border-mid: rgba(0,0,0,0.18);
+    --border-strong: rgba(0,0,0,0.28);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-primary: #1c1c1e;
+      --bg-secondary: #2c2c2e;
+      --text-primary: #f5f5f0;
+      --text-secondary: #a1a1aa;
+      --text-tertiary: #71717a;
+      --border-light: rgba(255,255,255,0.10);
+      --border-mid: rgba(255,255,255,0.16);
+      --border-strong: rgba(255,255,255,0.24);
+    }
+  }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 780px;
+    min-height: 100vh;
+    background: var(--bg-secondary);
+    padding: 1rem 1rem 0.75rem;
+    gap: 10px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 4px 10px;
+    border-bottom: 0.5px solid var(--border-light);
+  }
+
+  .logo {
+    width: 36px; height: 36px;
+    background: #E6F1FB;
+    border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    border: 0.5px solid #B5D4F4;
+    flex-shrink: 0;
+  }
+
+  .header-info h2 {
+    font-size: 16px; font-weight: 500;
+    color: var(--text-primary);
+    letter-spacing: -0.2px;
+  }
+
+  .header-info p {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-top: 1px;
+  }
+
+  .model-pill {
+    margin-left: auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: #185FA5;
+    background: #E6F1FB;
+    border: 0.5px solid #B5D4F4;
+    border-radius: 20px;
+    padding: 3px 10px;
+    white-space: nowrap;
+  }
+
+  .api-box {
+    background: var(--bg-primary);
+    border: 0.5px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+
+  .api-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .api-row { display: flex; gap: 8px; align-items: center; }
+
+  .api-row input {
+    flex: 1;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 7px 12px;
+    border: 0.5px solid var(--border-mid);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    outline: none;
+  }
+
+  .api-row input:focus { border-color: #378ADD; box-shadow: 0 0 0 2px rgba(55,138,221,0.10); }
+
+  .btn-save {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px; padding: 7px 14px;
+    border: 0.5px solid var(--border-mid);
+    border-radius: var(--radius-md);
+    background: transparent; color: var(--text-primary);
+    cursor: pointer; white-space: nowrap; transition: background 0.15s;
+  }
+
+  .btn-save:hover { background: var(--bg-secondary); }
+  .btn-save.saved { border-color: #0F6E56; color: #0F6E56; }
+
+  .api-hint { font-size: 11px; color: var(--text-secondary); font-family: 'IBM Plex Mono', monospace; }
+
+  .messages {
+    flex: 1; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 14px;
+    padding: 2px 2px 4px;
+    scroll-behavior: smooth;
+  }
+
+  .messages::-webkit-scrollbar { width: 3px; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+
+  .msg { display: flex; gap: 9px; align-items: flex-start; animation: fadeUp 0.22s ease both; }
+  .msg.user { flex-direction: row-reverse; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .avatar {
+    width: 27px; height: 27px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 500; flex-shrink: 0;
+    border: 0.5px solid var(--border-light);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .avatar.ai { background: #E6F1FB; color: #185FA5; }
+  .avatar.usr { background: var(--bg-secondary); color: var(--text-secondary); }
+
+  .bubble {
+    max-width: 84%;
+    padding: 10px 14px;
+    border: 0.5px solid var(--border-light);
+    font-size: 14px; line-height: 1.72;
+  }
+
+  .bubble.ai {
+    background: var(--bg-primary);
+    border-radius: 3px var(--radius-lg) var(--radius-lg) var(--radius-lg);
+  }
+
+  .bubble.usr {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg) 3px var(--radius-lg) var(--radius-lg);
+  }
+
+  .bubble h3 {
+    font-size: 13px; font-weight: 500; margin-bottom: 6px;
+    color: var(--text-secondary);
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+
+  .bubble p { margin-bottom: 0.55em; }
+  .bubble p:last-child { margin-bottom: 0; }
+  .bubble strong { font-weight: 500; }
+  .bubble em { font-style: italic; color: var(--text-secondary); }
+  .bubble ul { padding-left: 1.1em; margin-bottom: 0.5em; }
+  .bubble ul li { margin-bottom: 3px; }
+
+  .bubble code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: var(--bg-secondary);
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 0.5px solid var(--border-light);
+  }
+
+  .bubble a { color: #185FA5; }
+
+  .typing-dots { display: flex; gap: 4px; align-items: center; padding: 3px 0; }
+  .typing-dots span {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--text-secondary);
+    animation: dot 1.2s ease-in-out infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dot {
+    0%, 80%, 100% { opacity: 0.3; transform: scale(0.85); }
+    40% { opacity: 1; transform: scale(1); }
+  }
+
+  .starters { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 2px; }
+
+  .starter {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12.5px;
+    padding: 5px 12px;
+    background: var(--bg-primary);
+    border: 0.5px solid var(--border-light);
+    border-radius: 20px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.14s;
+  }
+
+  .starter:hover { border-color: #378ADD; color: #185FA5; background: #E6F1FB; }
+
+  .toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 4px;
+  }
+
+  .web-toggle {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; color: var(--text-secondary);
+    cursor: pointer; user-select: none;
+  }
+
+  .web-toggle input[type="checkbox"] { accent-color: #378ADD; cursor: pointer; }
+  .web-toggle .on { color: #185FA5; font-weight: 500; }
+
+  .hint { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-tertiary); }
+
+  .input-area {
+    display: flex; gap: 8px; align-items: flex-end;
+    background: var(--bg-primary);
+    border: 0.5px solid var(--border-mid);
+    border-radius: var(--radius-lg);
+    padding: 8px 8px 8px 14px;
+    transition: border-color 0.15s;
+  }
+
+  .input-area:focus-within { border-color: #378ADD; box-shadow: 0 0 0 2px rgba(55,138,221,0.08); }
+
+  textarea {
+    flex: 1;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px; line-height: 1.55;
+    border: none; background: transparent;
+    color: var(--text-primary);
+    resize: none; outline: none;
+    min-height: 22px; max-height: 110px;
+    overflow-y: auto;
+  }
+
+  textarea::placeholder { color: var(--text-tertiary); }
+
+  .send-btn {
+    width: 33px; height: 33px; border-radius: 8px;
+    border: 0.5px solid var(--border-mid);
+    background: transparent; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: all 0.14s;
+    color: var(--text-secondary);
+  }
+
+  .send-btn:hover:not(:disabled) { background: #E6F1FB; border-color: #B5D4F4; color: #185FA5; }
+  .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .send-btn svg { width: 14px; height: 14px; }
+
+  .error-bar {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    color: #A32D2D; padding: 6px 12px;
+    background: #FCEBEB; border-radius: var(--radius-md);
+    border: 0.5px solid #F09595;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">🔬</div>
+    <div class="header-info">
+      <h2>ResearchAI — intelligent research assistant</h2>
+      <p>openrouter · web search · citations</p>
+    </div>
+    <div class="model-pill">google/gemini-flash-1.5</div>
+  </header>
+
+  <div class="api-box" id="apiBox">
+    <div class="api-label">OpenRouter API key</div>
+    <div class="api-row">
+      <input type="password" id="apiKeyInput" placeholder="sk-or-..." autocomplete="off" />
+      <button class="btn-save" id="saveBtn" onclick="saveKey()">Connect</button>
+    </div>
+    <div class="api-hint">Key is stored in your browser only — never shared. Get one at openrouter.ai</div>
+  </div>
+
+  <div class="messages" id="messages"></div>
+
+  <div class="starters" id="starters">
+    <button class="starter" onclick="useStarter(this)">Summarize recent AI research trends</button>
+    <button class="starter" onclick="useStarter(this)">What is CRISPR and how does it work?</button>
+    <button class="starter" onclick="useStarter(this)">Explain quantum computing simply</button>
+    <button class="starter" onclick="useStarter(this)">Compare climate change mitigation strategies</button>
+    <button class="starter" onclick="useStarter(this)">Help me outline a research paper</button>
+    <button class="starter" onclick="useStarter(this)">What are the latest findings in neuroscience?</button>
+  </div>
+
+  <div class="toolbar">
+    <label class="web-toggle">
+      <input type="checkbox" id="webSearch" checked />
+      <span>Web search</span>
+      <span id="webStatus" class="on">on</span>
+    </label>
+    <span class="hint">shift+enter = new line</span>
+  </div>
+
+  <div class="input-area">
+    <textarea id="userInput" placeholder="Ask a research question, request a summary, or explore a topic…" rows="1"
+      onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled title="Send">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 8h12M9 3l5 5-5 5"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+const SYSTEM = `You are ResearchAI, a rigorous and knowledgeable research assistant. You help with:
+- Summarizing scientific papers, topics, and fields
+- Explaining complex concepts clearly and accurately
+- Comparing theories, methodologies, and findings
+- Structuring research papers, literature reviews, theses
+- Citing and identifying sources
+- Breaking down statistics, data, and studies
+- Answering questions across science, medicine, technology, social sciences, humanities
+
+Always be precise, well-structured, and cite key concepts. When summarizing topics, use headings if helpful. Mention notable researchers, institutions, or papers when relevant. If asked to outline something, give a clear numbered structure. Be thorough but not verbose. Acknowledge uncertainty where it exists. Never fabricate citations or specific statistics.`;
+
+let apiKey = localStorage.getItem('research_or_key') || '';
+let conversation = [];
+let isLoading = false;
+
+const input = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+const messagesEl = document.getElementById('messages');
+const apiKeyInput = document.getElementById('apiKeyInput');
+const webSearchEl = document.getElementById('webSearch');
+const webStatus = document.getElementById('webStatus');
+
+webSearchEl.addEventListener('change', () => {
+  webStatus.textContent = webSearchEl.checked ? 'on' : 'off';
+  webStatus.className = webSearchEl.checked ? 'on' : '';
+});
+
+if (apiKey) {
+  apiKeyInput.value = apiKey;
+  document.getElementById('apiBox').style.display = 'none';
+  addAIMessage("Hello! I'm **ResearchAI**, your intelligent research assistant.\n\nI can help you **summarize topics**, **explain complex concepts**, **structure research papers**, compare findings, and explore any academic field.\n\nWhat would you like to research today?");
+}
+
+input.addEventListener('input', () => {
+  sendBtn.disabled = !input.value.trim() || !apiKey || isLoading;
+});
+
+function saveKey() {
+  const k = apiKeyInput.value.trim();
+  if (!k) return;
+  apiKey = k;
+  localStorage.setItem('research_or_key', k);
+  const btn = document.getElementById('saveBtn');
+  btn.textContent = 'Connected ✓';
+  btn.classList.add('saved');
+  document.getElementById('apiBox').style.display = 'none';
+  addAIMessage("Hello! I'm **ResearchAI**, your intelligent research assistant.\n\nI can help you **summarize topics**, **explain complex concepts**, **structure research papers**, compare findings, and explore any academic field.\n\nWhat would you like to research today?");
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 110) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    if (!sendBtn.disabled) sendMessage();
+  }
+}
+
+function useStarter(btn) {
+  if (!apiKey) { document.getElementById('apiKeyInput').focus(); return; }
+  input.value = btn.textContent;
+  autoResize(input);
+  sendBtn.disabled = false;
+  sendMessage();
+}
+
+function escapeHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderMd(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^# (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^\d+\.\s(.+)$/gm, '<li>$1</li>')
+    .replace(/^[-•]\s(.+)$/gm, '<li>$1</li>')
+    .replace(/((<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>')
+    .replace(/^(?!<[hul])/, '<p>').replace(/(?<![>])$/, '</p>');
+}
+
+function addUserMessage(text) {
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.innerHTML = `<div class="avatar usr">you</div><div class="bubble usr">${escapeHtml(text).replace(/\n/g,'<br>')}</div>`;
+  messagesEl.appendChild(div);
+  scrollBottom();
+  document.getElementById('starters').style.display = 'none';
+}
+
+function addAIMessage(md) {
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = `<div class="avatar ai">R</div><div class="bubble ai">${renderMd(md)}</div>`;
+  messagesEl.appendChild(div);
+  scrollBottom();
+}
+
+function addAIMessageRaw(html) {
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = `<div class="avatar ai">R</div><div class="bubble ai">${html}</div>`;
+  messagesEl.appendChild(div);
+  scrollBottom();
+}
+
+function showTyping() {
+  const div = document.createElement('div');
+  div.className = 'msg'; div.id = 'typing';
+  div.innerHTML = `<div class="avatar ai">R</div><div class="bubble ai"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+  messagesEl.appendChild(div);
+  scrollBottom();
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing');
+  if (t) t.remove();
+}
+
+function scrollBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+
+async function sendMessage() {
+  const text = input.value.trim();
+  if (!text || !apiKey || isLoading) return;
+  input.value = ''; input.style.height = 'auto';
+  sendBtn.disabled = true; isLoading = true;
+
+  addUserMessage(text);
+  conversation.push({ role: 'user', content: text });
+  showTyping();
+
+  const useWeb = webSearchEl.checked;
+  const body = {
+    model: 'google/gemini-flash-1.5',
+    messages: [{ role: 'system', content: SYSTEM }, ...conversation],
+    max_tokens: 1200,
+    temperature: 0.4
+  };
+
+  if (useWeb) {
+    body.plugins = [{ id: 'web', max_results: 5 }];
+  }
+
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': window.location.href,
+        'X-Title': 'ResearchAI Assistant'
+      },
+      body: JSON.stringify(body)
+    });
+
+    const data = await res.json();
+    removeTyping();
+
+    if (data.error) {
+      showError(data.error.message || 'OpenRouter error. Check your API key.');
+    } else {
+      const reply = data.choices?.[0]?.message?.content || '';
+      const annotations = data.choices?.[0]?.message?.annotations || [];
+      conversation.push({ role: 'assistant', content: reply });
+
+      let extra = '';
+      if (annotations.length > 0) {
+        const sources = annotations.filter(a => a.type === 'url_citation').slice(0, 4);
+        if (sources.length) {
+          extra = '<br><br><strong>Sources:</strong> ' + sources.map(s =>
+            `<a href="${s.url_citation?.url}" target="_blank">[${(s.url_citation?.title || 'source').slice(0,40)}]</a>`
+          ).join(' ');
+        }
+      }
+
+      addAIMessageRaw(renderMd(reply) + extra);
+    }
+  } catch (err) {
+    removeTyping();
+    showError('Network error — please try again.');
+  }
+
+  isLoading = false;
+  sendBtn.disabled = !input.value.trim();
+}
+
+function showError(msg) {
+  const el = document.createElement('div');
+  el.className = 'error-bar';
+  el.textContent = msg;
+  messagesEl.appendChild(el);
+  scrollBottom();
+}
+</script>
+</body>
+</html>
